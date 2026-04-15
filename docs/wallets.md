@@ -1,6 +1,4 @@
-# Flattened repository snapshot
-# Generated (UTC): 2026-04-14T13:15:08Z
-# Root: /home/fn/Dev/wander-docs
+A flattened version of the Wander docs repository. Wander is the main browser extension wallet for Arweave.
 
 ===== FILE: README.md =====
 ---
