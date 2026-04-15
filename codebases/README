@@ -1,0 +1,6 @@
+Additional local example codebases:
+
+- `permaweb-libs`: look in service sources for AO process examples and action-driven interfaces.
+- `mux`: useful for explicit protocol surfaces and deterministic state patterns.
+
+These are supporting references, not the primary wiki layer.

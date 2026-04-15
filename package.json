@@ -1,0 +1,17 @@
+{
+  "name": "permaweb-llm-wiki",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy:counter": "node ./scripts/deploy-counter.mjs",
+    "test:counter": "node ./scripts/test-counter-lifecycle.mjs",
+    "deploy:task-board": "node ./scripts/deploy-task-board.mjs",
+    "interact:task-board": "node ./scripts/interact-task-board.mjs",
+    "state:task-board": "node ./scripts/get-task-board-state.mjs",
+    "deploy:token": "node ./scripts/deploy-token.mjs"
+  },
+  "dependencies": {
+    "@permaweb/aoconnect": "0.0.93"
+  }
+}

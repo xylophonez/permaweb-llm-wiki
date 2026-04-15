@@ -1,0 +1,18 @@
+{
+  "manifest": "arweave/paths",
+  "version": "0.1.0",
+  "index": {
+    "path": "index.html"
+  },
+  "paths": {
+    "index.html": {
+      "id": "<INDEX_HTML_TX_ID>"
+    },
+    "assets/app.css": {
+      "id": "<APP_CSS_TX_ID>"
+    },
+    "assets/app.js": {
+      "id": "<APP_JS_TX_ID>"
+    }
+  }
+}
