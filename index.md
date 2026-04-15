@@ -7,7 +7,7 @@ This is the content-oriented catalog for the Permaweb LLM Wiki.
 - [README.md](README.md): repo purpose and layout.
 - [AGENTS.md](AGENTS.md): schema for how the wiki should be maintained.
 - [topics/meta/wiki-pattern.md](topics/meta/wiki-pattern.md): persistent wiki model used by this repo.
-- [log.md](log.md): append-only ingest and lint history.
+- [log.md](log.md): append-only ingest and lint history -- create this on initialization if it does not exist.
 
 ## AO
 
