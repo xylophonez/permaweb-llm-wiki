@@ -1,0 +1,5 @@
+.env
+wallet.json
+darwin.json
+node_modules/
+build-lua

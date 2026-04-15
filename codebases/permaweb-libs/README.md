@@ -1,0 +1,1192 @@
+# @permaweb/libs
+
+This SDK provides a set of libraries designed as foundational building blocks for developers to create and interact with applications on Arweave's permaweb. These libraries aim to contribute building on the composable web, promoting interoperability and reusability across decentralized applications. With libraries for managing profiles, atomic assets, collections, and more, this SDK simplifies the development of decentralized, permanent applications.
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Initialization](#initialization)
+- [Usage](#usage)
+  - [Common](#common)
+    - [AO Functions](#ao-functions)
+    - [Arweave Functions](#arweave-functions)
+    - [GraphQL Functions](#graphql-functions)
+  - [Zones](#zones)
+    - [createZone](#createzone)
+    - [updateZone](#updatezone)
+    - [getZone](#getzone)
+  - [Profiles](#profiles)
+    - [createProfile](#createprofile)
+    - [updateProfile](#updateprofile)
+    - [getProfileById](#getprofilebyid)
+    - [getProfileByWalletAddress](#getprofilebywalletaddress)
+  - [Atomic Assets](#atomic-assets)
+    - [createAtomicAsset](#createatomicasset)
+    - [getAtomicAsset](#getatomicasset)
+    - [getAtomicAssets](#getatomicassets)
+  - [Comments](#comments)
+    - [createComment](#createcomment)
+    - [getComments](#getcomments)
+    - [updateCommentStatus](#updatecommentstatus)
+    - [removeComment](#removecomment)
+  - [Collections](#collections)
+    - [createCollection](#createcollection)
+    - [updateCollectionAssets](#updatecollectionassets)
+    - [getCollection](#getcollection)
+    - [getCollections](#getcollections)
+  - [Moderation](#moderation)
+    - [addModerationEntry](#addmoderationentry)
+    - [getModerationEntries](#getmoderationentries)
+    - [updateModerationEntry](#updatemoderationentry)
+    - [removeModerationEntry](#removemoderationentry)
+    - [addModerationSubscription](#addmoderationsubscription)
+    - [removeModerationSubscription](#removemoderationsubscription)
+    - [getModerationSubscriptions](#getmoderationsubscriptions)
+- [Examples](#examples)
+- [Resources](#resources)
+
+## Prerequisites
+
+- `node >= v18.0`
+- `npm` or `yarn`
+- `arweave`
+- `@permaweb/aoconnect`
+
+## Installation
+
+If `arweave` or `@permaweb/aoconnect` is not already installed, add them to the installation command below as additional packages
+
+```bash
+npm install @permaweb/libs
+```
+
+or
+
+```bash
+yarn add @permaweb/libs
+```
+
+## Initialization
+
+```typescript
+import Arweave from "arweave";
+import { connect, createDataItemSigner } from "@permaweb/aoconnect";
+import Permaweb from "@permaweb/libs";
+
+// Browser Usage
+const wallet = window.arweaveWallet;
+
+// NodeJS Usage
+const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, "utf-8"));
+
+const permaweb = Permaweb.init({
+  ao: connect(),
+  arweave: Arweave.init(),
+  signer: createDataItemSigner(wallet),
+});
+```
+
+## Usage
+
+### Common
+
+The common module provides low-level utility functions for working with AO processes, Arweave transactions, and GraphQL queries. These functions are used internally by the higher-level services but can also be used directly for more advanced use cases.
+
+#### AO Functions
+
+##### `createProcess`
+
+Creates a new AO process with optional evaluation.
+
+```typescript
+const processId = await permaweb.createProcess({
+  module: 'MODULE_ID',
+  scheduler: 'SCHEDULER_ID',
+  evalTxId: 'EVAL_TX_ID', // optional
+  tags: [{ name: 'Custom-Tag', value: 'custom-value' }]
+});
+```
+
+##### `sendMessage`
+
+Sends a message to an AO process.
+
+```typescript
+const messageId = await permaweb.sendMessage({
+  processId: 'PROCESS_ID',
+  action: 'Get-Info',
+  data: { key: 'value' }
+});
+```
+
+##### `readProcess`
+
+Performs a dry run of a message without adding to the process schedule.
+
+```typescript
+const result = await permaweb.readProcess({
+  processId: 'PROCESS_ID',
+  action: 'Info',
+  data: { key: 'value' }
+});
+```
+
+##### `readState`
+
+Reads process state using HyperBEAM with a fallback to dry run.
+
+```typescript
+const state = await permaweb.readState({
+  processId: 'PROCESS_ID',
+  path: 'state',
+  serialize: true,
+  fallbackAction: 'Get-State'
+});
+```
+
+#### Arweave Functions
+
+##### `resolveTransaction`
+
+Resolves transaction IDs from data URIs or creates new transactions.
+
+```typescript
+const txId = await permaweb.resolveTransaction('data:text/plain;base64,SGVsbG8gV29ybGQ=');
+// or
+const txId = await permaweb.resolveTransaction('Hello, Arweave!');
+```
+
+#### GraphQL Functions
+
+##### `getGQLData`
+
+Queries Arweave gateways using GraphQL for transaction data.
+
+```typescript
+const response = await permaweb.getGQLData({
+  gateway: 'arweave.net',
+  ids: ['TX_ID_1', 'TX_ID_2'],
+  tags: [{ name: 'App-Name', values: ['MyApp'] }],
+  owners: ['OWNER_ADDRESS'],
+  cursor: null,
+  paginator: 100
+});
+```
+
+##### `getAggregatedGQLData`
+
+Fetches all pages of GraphQL data automatically.
+
+```typescript
+const allData = await permaweb.getAggregatedGQLData({
+  gateway: 'arweave.net',
+  tags: [{ name: 'App-Name', values: ['MyApp'] }],
+  paginator: 100
+}, (message) => console.log(message)); // Optional progress callback
+```
+
+### Zones
+
+Zones are representations of entities on the permaweb that contain relevant information and can perform actions on the entity"s behalf. A profile is an instance of a zone with specific metadata ([Read the spec](./specs/spec-zones.md)).
+
+##### `createZone`
+
+```typescript
+const zoneId = await permaweb.createZone({
+  spawnModeration: true,
+  authUsers: ["user-address-1", "user-address-2"]
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args (optional)`: Object containing:
+  - `data` (optional): Initial zone data
+  - `tags` (optional): Additional tags
+  - `spawnModeration` (optional): Whether to spawn a moderation process (default: false)
+  - `authUsers` (optional): Array of authorized user addresses for the moderation process
+- `callback (optional)`: Callback function for client use
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneProcessId;
+```
+
+</details>
+
+##### `updateZone`
+
+```typescript
+const zoneUpdateId = await permaweb.updateZone(
+  {
+    name: "Sample Zone",
+    metadata: {
+      description: "A sample zone for testing",
+      version: "1.0.0",
+    },
+  },
+  zoneId
+);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Zone data to update, specified in an object
+- `zoneId`: The ID of the zone to update
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneUpdateId;
+```
+
+</details>
+
+##### `getZone`
+
+```typescript
+const zone = await permaweb.getZone(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{ store: [], assets: [] };
+```
+
+</details>
+
+##### `leaveZone`
+
+```typescript
+const leaveZoneId = await permaweb.leaveZone(zoneId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `zoneId`: The ID of the zone to leave
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ZoneLeaveId;
+```
+
+</details>
+
+### Profiles
+
+Profiles are a digital representation of entities, such as users, organizations, or channels. They include specific metadata that describes the entity and can be associated with various digital assets and collections. Profiles are created, updated, and fetched using the following functions.
+
+##### `createProfile`
+
+```typescript
+const profileId = await permaweb.createProfile({
+  username: "My username",
+  displayName: "My display name",
+  description: "My description",
+  thumbnail: "Thumbnail image data",
+  banner: "Banner image data",
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing profile details, including `username`, `displayName`, `description`, `thumbnail (optional)`, and `banner (optional)`
+- `callback (optional)`: Callback function for client use
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ProfileProcessId;
+```
+
+</details>
+
+##### `updateProfile`
+
+```typescript
+const profileId = await permaweb.updateProfile({
+    username: "My usename",
+    displayName: "My display name",
+    description: "My description",
+    thumbnail: "Thumbnail image data",
+    banner: "Banner image data",
+  }, profileId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Profile details to update, structured similarly to `createProfile`
+- `profileId`: The ID of the profile to update
+- `callback (optional)`: Callback function for client use
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ProfileProcessUpdateId;
+```
+
+</details>
+
+##### `getProfileById`
+
+```typescript
+const profile = await permaweb.getProfileById(profileId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `profileId`: The ID of the profile to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{
+  id: "ProfileProcessId",
+  walletAddress: "WalletAddress",
+  username: "Sample username",
+  displayName: "Sample display name",
+  description: "Sample description",
+  thumbnail: "ThumbnailTxId",
+  banner: "BannerTxId",
+  assets: [
+    { id: "AssetProcessId1", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId2", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId3", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+  ]
+}
+```
+
+</details>
+
+##### `getProfileByWalletAddress`
+
+```typescript
+const profile = await permaweb.getProfileByWalletAddress(walletAddress);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `walletAddress`: The wallet address associated with the profile
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{
+  id: "ProfileProcessId",
+  walletAddress: "WalletAddress",
+  username: "Sample username",
+  displayName: "Sample display name",
+  description: "Sample description",
+  thumbnail: "ThumbnailTxId",
+  banner: "BannerTxId",
+  assets: [
+    { id: "AssetProcessId1", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId2", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+    { id: "AssetProcessId3", quantity: "1", dateCreated: 123456789, lastUpdate: 123456789 },
+  ]
+}
+```
+
+</details>
+
+### Atomic Assets
+
+Atomic assets are unique digital item consisting of an AO process and its associated data which are stored together in a single transaction on Arweave ([Read the spec](./specs/spec-atomic-assets.md)).
+
+##### `createAtomicAsset`
+
+```typescript
+const assetId = await permaweb.createAtomicAsset({
+  name: "Example Name",
+  description: "Example Description",
+  topics: ["Topic 1", "Topic 2", "Topic 3"],
+  creator: CREATOR_ADDRESS,
+  data: "1234",
+  contentType: "text/plain",
+  assetType: "Example Atomic Asset Type",
+  metadata: {
+    status: "Initial Status",
+  },
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing asset details, including `name`, `description`, ` topics`, `creator (wallet or profile address)`, `data`, `contentType`, `assetType`, `metadata (optional)`, and `tags (optional)`
+- `callback (optional)`: Callback function for client use
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+AssetProcessId;
+```
+
+</details>
+
+##### `getAtomicAsset`
+
+```typescript
+const asset = await permaweb.getAtomicAsset(assetId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `assetId`: The ID of the asset to fetch
+- `args (optional)`: Object for additional options with field `useGateway (boolean)` to also query the gateway for asset data
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+{
+  id: "htWiEU2Gh2h0Dv8nfXrtVcKZBqDQTi8NTb6hL_e7atg",
+  transferable: "true",
+  name: "Example Name",
+  metadata: {
+    status: "Initial Status",
+    topics: [ "Topic 1", "Topic 2", "Topic 3" ],
+    description: "Example Description"
+  },
+  creator: "creator",
+  balances: { creator: "1" },
+  ticker: "ATOMIC",
+  denomination: "1",
+  dateCreated: "1738002523328"
+}
+```
+
+</details>
+
+##### `getAtomicAssets`
+
+```typescript
+const assets = await permaweb.getAtomicAssets(assetIds);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `assetIds`: A list of the asset IDs to fetch
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+[
+  {
+    id: "htWiEU2Gh2h0Dv8nfXrtVcKZBqDQTi8NTb6hL_e7atg",
+    owner: "nl5hKKS6qrwaGZST_jAcxzgec9rZcB-pCyNFDiPgPpE",
+    authority: "fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY",
+    onBoot: "XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE",
+    creator: "creator",
+    assetType: "Example Atomic Asset Type",
+    contentType: "text/plain",
+    implements: "ANS-110",
+    dateCreated: 1738002523328,
+    name: "Example Name",
+    description: "Example Description",
+    topics: ["Topic 1", "Topic 2", "Topic 3"],
+    ticker: "ATOMIC",
+    denomination: 1,
+    totalsupply: 1,
+    transferable: true,
+    status: "Initial Status",
+    dataProtocol: "ao",
+    variant: "ao.TN.1",
+    type: "Process",
+    module: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
+    scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    sdk: "aoconnect",
+  },
+  {
+    id: "tgClfHwR3HqP23vBbKmyXQf3N-LTqsR3-Fm9oH3KCG0",
+    owner: "nl5hKKS6qrwaGZST_jAcxzgec9rZcB-pCyNFDiPgPpE",
+    authority: "fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY",
+    onBoot: "XYz8buLR5LQdhOOzWuCt9kBjoXHMowouWpXcGm9wdEE",
+    creator: "creator",
+    assetType: "Example Atomic Asset Type",
+    contentType: "text/plain",
+    implements: "ANS-110",
+    dateCreated: 1738002535187,
+    name: "Example Name",
+    description: "Example Description",
+    topics: ["Topic 1", "Topic 2", "Topic 3"],
+    ticker: "ATOMIC",
+    denomination: 1,
+    totalsupply: 1,
+    transferable: true,
+    status: "Initial Status",
+    dataProtocol: "ao",
+    variant: "ao.TN.1",
+    type: "Process",
+    module: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
+    scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    sdk: "aoconnect",
+  },
+];
+```
+
+</details>
+
+### Comments
+
+Comments are managed through a separate comments process that handles comment operations for atomic assets. When creating an atomic asset, you can optionally spawn a dedicated comments process by setting `spawnComments: true` in the asset creation parameters.
+
+##### `createComment`
+
+```typescript
+const commentId = await permaweb.createComment({
+  commentsId: commentsProcessId,
+  creator: CREATOR_ADDRESS,
+  content: "Comment Data"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId` (the ID of the comments process), `creator` (wallet or profile address), and `content` (the comment text)
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentUpdateId; // Message or slot of the comment creation
+```
+
+</details>
+
+##### `getComments`
+
+```typescript
+const comments = await permaweb.getComments({
+  commentsId: commentsProcessId
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId` (the ID of the comments process)
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+[
+  {
+    id: "comment-id",
+    creator: "creator-address",
+    content: "Comment content text",
+    dateCreated: 1234567890,
+    status: "active"
+  },
+  {
+    id: "comment-id-2", 
+    creator: "creator-address-2",
+    content: "Another comment",
+    dateCreated: 1234567891,
+    status: "active"
+  }
+];
+```
+
+</details>
+
+##### `updateCommentStatus`
+
+```typescript
+const updateId = await permaweb.updateCommentStatus({
+  commentsId: commentsProcessId,
+  commentId: "comment-id",
+  status: "inactive"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId`, `commentId`, and `status` ("active" or "inactive")
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentUpdateId; // Message or slot of the status update
+```
+
+</details>
+
+##### `removeComment`
+
+```typescript
+const removeId = await permaweb.removeComment({
+  commentsId: commentsProcessId,
+  commentId: "comment-uuid"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `commentsId` and `commentId`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CommentRemoveId; // Message or slot of the comment removal
+```
+
+</details>
+
+### Collections
+
+Collections are structured groups of atomic assets, allowing for cohesive representation, management, and categorization of digital items. Collections extend the concept of atomic assets by introducing an organized layer to group and manage related assets. ([Read the spec](./specs/spec-collections.md)).
+
+##### `createCollection`
+
+```typescript
+const collectionId = await permaweb.createCollection({
+  title: "Example Title",
+  description: "Example Description",
+  creator: profileId,
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `title`, `description`, `creator`, `thumbnail (optional)`, and `banner (optional)`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CollectionProcessId;
+```
+
+</details>
+
+##### `updateCollectionAssets`
+
+```typescript
+const collectionUpdateId = await permaweb.updateCollectionAssets({
+  collectionId: collectionId,
+  assetIds: ["AssetId1", "AssetId2", "AssetId3"],
+  creator: creator,
+  updateType: "Add",
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `collectionId`, `assetIds`, `profileId`, and `updateType ("Add" | "Remove")`
+
+</details>
+
+<details>
+  <summary>
+    <strong>Response</strong>
+  </summary>
+
+```typescript
+CollectionProcessUpdateId;
+```
+
+</details>
+
+##### `getCollection`
+
+```typescript
+const collection = await permaweb.getCollection(collectionId);
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `collectionId`: The ID of the collection to fetch
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+{
+  id: "Id",
+  title: "Title",
+  description: "Description",
+  creator: "Creator",
+  dateCreated: "DateCreated",
+  thumbnail: "ThumbnailTx",
+  banner: "BannerTx",
+  assets: ["AssetId1", "AssetId2", "AssetId3"]
+}
+```
+
+</details>
+
+##### `getCollections`
+
+```typescript
+const collections = await permaweb.getCollections();
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing `creator (optional)`
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    id: "Id",
+    title: "Title",
+    description: "Description",
+    creator: "Creator",
+    dateCreated: "DateCreated",
+    thumbnail: "ThumbnailTx",
+    banner: "BannerTx",
+    assets: ["AssetId1", "AssetId2", "AssetId3"],
+  },
+  {
+    id: "Id",
+    title: "Title",
+    description: "Description",
+    creator: "Creator",
+    dateCreated: "DateCreated",
+    thumbnail: "ThumbnailTx",
+    banner: "BannerTx",
+    assets: ["AssetId1", "AssetId2", "AssetId3"],
+  },
+];
+```
+
+</details>
+
+### Moderation
+
+Moderation provides content moderation capabilities through dedicated moderation processes. Similar to comments, moderation functions require the moderation process ID directly.
+
+##### `addModerationEntry`
+
+```typescript
+const moderationEntryId = await permaweb.addModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId",
+  status: "blocked",
+  targetContext: "CommentsProcessId",
+  moderator: "ModeratorAddress",
+  reason: "Spam content",
+  metadata: { /* optional metadata */ }
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated ('comment' | 'profile' | string)
+  - `targetId`: The ID of the entity to moderate
+  - `status`: Moderation status ('active' | 'inactive' | 'removed' | 'flagged' | 'approved')
+  - `moderator`: Address of the moderator
+  - `targetContext` (optional): Context ID for the moderation
+  - `reason` (optional): Reason for moderation
+  - `metadata` (optional): Additional metadata
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationEntryId;
+```
+
+</details>
+
+##### `getModerationEntries`
+
+```typescript
+const moderationEntries = await permaweb.getModerationEntries({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  status: "blocked",
+  targetContext: "CommentsProcessId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity ('comment' | 'profile' | string)
+  - `targetId` (optional): Filter by specific target ID
+  - `status` (optional): Filter by status
+  - `targetContext` (optional): Filter by context
+  - `moderator` (optional): Filter by moderator address
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+[
+  {
+    targetId: "CommentId",
+    status: "blocked",
+    targetContext: "CommentsProcessId",
+    moderator: "ModeratorAddress",
+    dateCreated: 1234567890000,
+    reason: "Spam content"
+  }
+];
+```
+
+</details>
+
+##### `updateModerationEntry`
+
+```typescript
+const updateId = await permaweb.updateModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId",
+  status: "allowed",
+  moderator: "ModeratorAddress",
+  reason: "False positive, content is acceptable"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated
+  - `targetId`: The ID of the entity to update
+  - `status`: New moderation status
+  - `moderator`: Address of the moderator
+  - `reason` (optional): Reason for the update
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUpdateId;
+```
+
+</details>
+
+##### `removeModerationEntry`
+
+```typescript
+const removeId = await permaweb.removeModerationEntry({
+  moderationId: moderationProcessId,
+  targetType: "comment",
+  targetId: "CommentId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `targetType`: Type of entity being moderated
+  - `targetId`: The ID of the entity to remove from moderation
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationRemoveId;
+```
+
+</details>
+
+##### `addModerationSubscription`
+
+```typescript
+const subscriptionId = await permaweb.addModerationSubscription({
+  moderationId: moderationProcessId,
+  originZone: "OriginZoneId",
+  subscriptionType: "default"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `originZone`: The ID of the zone to subscribe to
+  - `subscriptionType` (optional): Type of subscription (e.g., "default", "spam")
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationSubscriptionId;
+```
+
+</details>
+
+##### `removeModerationSubscription`
+
+```typescript
+const removeId = await permaweb.removeModerationSubscription({
+  moderationId: moderationProcessId,
+  originZone: "OriginZoneId"
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+  - `originZone`: The ID of the zone to unsubscribe from
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+ModerationUnsubscribeId;
+```
+
+</details>
+
+##### `getModerationSubscriptions`
+
+```typescript
+const subscriptions = await permaweb.getModerationSubscriptions({
+  moderationId: moderationProcessId
+});
+```
+
+<details>
+  <summary><strong>Parameters</strong></summary>
+
+- `args`: Object containing:
+  - `moderationId`: The ID of the moderation process
+
+</details>
+
+<details>
+  <summary><strong>Response</strong></summary>
+
+```typescript
+["ZoneId1", "ZoneId2", "ZoneId3"];
+```
+
+</details>
+
+## Examples
+
+To streamline the integration of `@permaweb/libs` into your React applications, you can use the following `PermawebProvider`. This provider simplifies dependency management and avoids the need to create multiple SDK instances across different components in your frontend application. By leveraging React Context, the provider ensures the Permaweb SDK is initialized once and is accessible throughout your component tree.
+
+### Key Features of This Example:
+
+- **Global Initialization**: The `PermawebProvider` initializes the necessary dependencies (e.g., Arweave, AO Connect, and optional wallet signing).
+- **React Context Integration**: It makes the initialized `libs` instance globally available to all child components without requiring prop drilling.
+- **Reusable Hook**: The `usePermawebProvider` hook offers a convenient way to access the SDK in any component.
+
+---
+
+### Provider Setup
+
+The following example demonstrates how to create a React Context and Provider for `@permaweb/libs`.
+
+```typescript
+import React from 'react';
+
+import Arweave from 'arweave';
+import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import Permaweb from '@permaweb/libs';
+
+import { useArweaveProvider } from './ArweaveProvider';
+
+interface PermawebContextState {
+	libs: any | null;
+}
+
+const PermawebContext = React.createContext<PermawebContextState>({
+	libs: null,
+});
+
+export function usePermawebProvider(): PermawebContextState {
+	return React.useContext(PermawebContext);
+}
+
+export function PermawebProvider(props: { children: React.ReactNode }) {
+	const arProvider = useArweaveProvider();
+
+	const [libs, setLibs] = React.useState<any>(null);
+
+	React.useEffect(() => {
+		const dependencies: any = { ao: connect(), arweave: Arweave.init({}) };
+		if (arProvider.wallet) {
+			dependencies.signer = createDataItemSigner(arProvider.wallet);
+		}
+
+		const permawebInstance = Permaweb.init(dependencies);
+		setLibs(permawebInstance);
+	}, [arProvider.wallet]);
+
+	return <PermawebContext.Provider value={{ libs }}>{props.children}</PermawebContext.Provider>;
+}
+
+```
+
+### Explanation:
+
+1. **React Context**: The `PermawebContext` is used to store the initialized `libs` object, making it accessible across your application.
+2. **Dynamic Initialization**: In the `useEffect` hook, the dependencies are initialized once when the provider mounts, including optional wallet signing logic.
+3. **Encapsulation**: The `PermawebProvider` ensures the SDK logic is abstracted, keeping the rest of your app clean and focused.
+
+---
+
+### Usage in a Component
+
+Here's how you can use the `usePermawebProvider` hook to access the `libs` instance in a React component:
+
+```typescript
+import React from "react";
+import { usePermawebProvider } from "providers/PermawebProvider";
+
+export default function MyComponent() {
+  const { libs } = usePermawebProvider();
+
+  React.useEffect(() => {
+    (async function fetchAsset() {
+      if (libs) {
+        try {
+          const asset = await libs.getAtomicAsset(id);
+          console.log("Fetched Asset:", asset);
+        } catch (error) {
+          console.error("Error fetching asset:", error);
+        }
+      }
+    })();
+  }, [libs]);
+
+  return <h1>Permaweb Libs Component</h1>;
+}
+```
+
+## Contributions
+
+Contributions to **@permaweb/libs** are welcome! Before submitting a new feature or service, please ensure that it:
+
+- **Aligns with the ecosystem**: Consider how the service can be broadly applicable across decentralized applications on Arweave. We strive to maintain composable, reusable, and interoperable building blocks.  
+- **Is interoperable**: New services or modules should easily integrate with existing modules (e.g., Profiles, Zones, Atomic Assets) to provide a cohesive developer experience.  
+- **Includes documentation and tests**: Provide clear documentation, usage examples, and sufficient test coverage to ensure quality and maintainability.
+
+### How to Contribute
+
+1. **Open an Issue**: Start by creating a new issue describing your proposal or bug fix. This helps gather feedback from the community and maintainers.  
+2. **Discuss**: Collaborate on the issue, refine the idea, and outline a plan.  
+3. **Implement**: Submit a Pull Request once you have a working solution. Please follow the existing code style and conventions.  
+4. **Review**: Engage in the review process—address comments, refine your code, and finalize changes.  
+
+By ensuring new contributions are designed with the broader ecosystem in mind, we maintain a robust and versatile platform for permaweb developers.
+
+## Resources
+
+- [AO Connect](https://github.com/permaweb/ao)
+- [ArweaveJS](https://github.com/ArweaveTeam/arweave-js)
