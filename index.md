@@ -14,6 +14,7 @@ This is the content-oriented catalog for the Permaweb LLM Wiki.
 - [topics/ao/when-to-use-ao.md](topics/ao/when-to-use-ao.md): decision rule for AO vs. GraphQL.
 - [topics/ao/process-blueprints.md](topics/ao/process-blueprints.md): local AO process examples, harnesses, defaults, and working patterns.
 - [topics/ao/token-blueprints.md](topics/ao/token-blueprints.md): single maintained token deployment and interaction-proof flow.
+- [topics/ao/browser-client-reliability.md](topics/ao/browser-client-reliability.md): practical runtime hardening patterns for wallet-signed AO browser clients.
 
 ## Arweave
 

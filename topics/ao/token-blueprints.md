@@ -26,6 +26,11 @@ A run is valid only when:
 - a new process ID is returned
 - `afterBalance - beforeBalance` matches `10^Denomination`
 
+## Runtime hardening notes
+
+- Always send `Balance` checks with an explicit recipient tag tied to the deployment wallet address (`Recipient=<derived wallet address>`), instead of relying on implicit sender defaults.
+- Treat occasional AO transport failures as transient during message send (`HTTP request failed`) and retry `ao.message(...)` once before failing the attempt.
+
 ## Defaults
 
 The local deploy harness defaults are:

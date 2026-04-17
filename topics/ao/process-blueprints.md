@@ -57,6 +57,7 @@ The current local harness defaults are:
 - Use `ao/task-board.lua` when the need is a fuller action surface with public reads and state summaries.
 - Use `ao/token.lua` when the need is a token action surface with deploy-time interaction proof.
 - Use the deploy scripts when the task needs live-network validation and structured run logs, not just blueprint authoring.
+- Use [browser-client-reliability.md](browser-client-reliability.md) when the issue is browser runtime transport/signing behavior rather than deploy harness behavior.
 
 ## Evidence
 - [WORKING-PATTERNS.md](../../WORKING-PATTERNS.md)

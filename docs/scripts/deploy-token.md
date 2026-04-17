@@ -23,9 +23,9 @@ The script:
 3. Spawns a new process with the configured AO module and scheduler.
 4. Sends `Eval` with `ao/token.lua`.
 5. Sends `Info`.
-6. Sends `Balance` for the calling wallet (before claim).
+6. Sends `Balance` with `Recipient=<derived wallet address>` (before claim).
 7. Sends `Claim`.
-8. Sends `Balance` again (after claim).
+8. Sends `Balance` again with `Recipient=<derived wallet address>` (after claim).
 9. Asserts that `postBalance - preBalance == 10^Denomination`.
 10. Persists a structured JSON run log.
 
@@ -77,3 +77,4 @@ The log includes:
 - This script creates a new process on each successful run.
 - It requires a wallet key that can sign AO messages.
 - If the first endpoint fails, the script retries on the next configured endpoint.
+- For transient AO transport send failures, the script retries `ao.message(...)` once before failing the current endpoint attempt.

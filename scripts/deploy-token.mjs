@@ -197,12 +197,30 @@ async function sendAndWait(ao, params) {
     pollMs = 1000
   } = params;
 
-  const messageId = await ao.message({
-    process: processId,
-    signer,
-    tags: [{ name: "Action", value: action }, ...tags],
-    data
-  });
+  let messageId = "";
+  let lastSendError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      messageId = await ao.message({
+        process: processId,
+        signer,
+        tags: [{ name: "Action", value: action }, ...tags],
+        data
+      });
+      lastSendError = null;
+      break;
+    } catch (error) {
+      lastSendError = error;
+      if (attempt === 0) {
+        await sleep(900);
+      }
+    }
+  }
+
+  if (lastSendError || !messageId) {
+    throw lastSendError || new Error(`Failed to send action ${action}`);
+  }
 
   const started = Date.now();
   let lastResult = null;
@@ -281,6 +299,7 @@ async function runAttempt(input) {
     processId,
     signer,
     action: "Balance",
+    tags: [{ name: "Recipient", value: walletAddress }],
     maxWaitMs: 30000,
     pollMs: 1200
   });
@@ -299,6 +318,7 @@ async function runAttempt(input) {
     processId,
     signer,
     action: "Balance",
+    tags: [{ name: "Recipient", value: walletAddress }],
     maxWaitMs: 30000,
     pollMs: 1200
   });

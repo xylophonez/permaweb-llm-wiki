@@ -21,17 +21,27 @@
    - `spawn`
    - `Eval`
    - protocol-specific actions
+   - retry one transient `ao.message(...)` send failure before marking the attempt failed
 5. Assert semantic results, not just transport success.
 6. Persist full run log JSON with attempt telemetry.
+
+## Browser interaction pattern (wallet-signed AO actions)
+
+- Never use `dryrun` in the browser runtime interaction path.
+- Use signed `message -> result` reads/writes for runtime behavior.
+- Include `SCHEDULER` in `connect(...)` for mainnet browser clients.
+- Serialize wallet-signed actions to avoid overlapping signature prompts and transport stalls.
+- Use a per-endpoint transient send retry (`ao.message(...)`) before failing over.
+- Use realistic transport timeouts (>= 30s) for mainnet push routes.
 
 ## Token flow pattern
 
 For token deployments, the required semantic proof is:
 
 1. `Info`
-2. `Balance` (before)
+2. `Balance` (before) with explicit `Recipient=<walletAddress>`
 3. `Claim`
-4. `Balance` (after)
+4. `Balance` (after) with explicit `Recipient=<walletAddress>`
 5. Assert `after - before == 10^Denomination`
 
 A deployment is not accepted until both conditions are true:
