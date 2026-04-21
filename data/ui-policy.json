@@ -1,0 +1,25 @@
+{
+  "sourceRoots": [
+    "ui",
+    "web",
+    "frontend",
+    "client",
+    "site",
+    "app",
+    "src",
+    "public",
+    "index.html",
+    "styles.css"
+  ],
+  "excludeDirs": [
+    "node_modules",
+    "dist",
+    ".git",
+    "runs"
+  ],
+  "excludeFiles": [
+    "wallet.json",
+    ".agents-ack.json",
+    "data/last-ui-deploy.json"
+  ]
+}

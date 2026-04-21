@@ -11,6 +11,18 @@ For browser dApps in this repo, the default recommendation is:
 - Use `arweave-js` when the task is creating transactions, adding tags, querying network/block/tx state, or chunked upload handling.
 - Use both together for browser publishing flows: build transaction with `arweave-js`, sign/dispatch through Wander.
 
+## Identity model (wallet-first)
+
+For user-authored apps (social feeds, profiles, messaging, microblogs), wallet address should be the primary identity layer.
+
+- treat the connected wallet address as the canonical user ID
+- derive actor/profile IDs from wallet identity, not from free-text handles
+- store handles, display names, bios, and avatars as mutable profile metadata attached to the wallet identity
+- include wallet-derived actor/owner fields in authored objects so identity survives UI alias changes
+- when wallet is disconnected, prefer read-only mode instead of creating synthetic local author identities
+
+Use this rule unless a specific app protocol explicitly defines a stronger identity primitive.
+
 ## Dispatch endpoint control
 
 `dispatch()` uses the bundler node configured by the user/extension.
@@ -72,6 +84,7 @@ await window.arweaveWallet.dispatch(tx);
 - Align gateway usage with `getArweaveConfig()` when the wallet can override gateway settings.
 - Check tx status and confirmations before treating tx IDs as finalized.
 - For large batch publishing, use bundling-oriented paths instead of raw per-tx posting.
+- For user/app uploads, prefer Arweave persistence as the durable source of truth; use local storage for drafts/cache only.
 
 ## References
 

@@ -5,6 +5,7 @@ The PermawebOS seed pattern is the bridge between an app URL and an LLM being ab
 ## Primary local sources
 
 - [../../AGENTS.md](../../AGENTS.md)
+- [core-loop-policy.md](core-loop-policy.md)
 - [../../resources/permawebos/final-seed-checklist.md](../../resources/permawebos/final-seed-checklist.md)
 - [../../resources/arweave/deploy-up.mjs](../../resources/arweave/deploy-up.mjs)
 - [../../resources/arweave/manifest.example.json](../../resources/arweave/manifest.example.json)
@@ -29,7 +30,9 @@ The local seed pattern repeatedly depends on:
 - deploy scripts
 - `forked-from` lineage tags
 - deploy output that includes both app URL and code archive URL
+- assistant response output with one parse-stable app-card line (see [../arweave/deploying-web-apps.md](../arweave/deploying-web-apps.md))
 - a wallet operation model that is explicit for browser dApps (`window.arweaveWallet` + `arweave-js`)
+- Arweave-first persistence for data uploads (local/browser storage only for cache/drafts)
 
 ## Final-seed hardening
 

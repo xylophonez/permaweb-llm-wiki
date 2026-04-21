@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "policy:ui-check": "node ./scripts/ui-policy-check.mjs",
+    "policy:ui-check:predeploy": "node ./scripts/ui-policy-check.mjs --context=predeploy",
+    "deploy:record-ui": "node ./scripts/record-ui-deploy.mjs",
     "deploy:counter": "node ./scripts/deploy-counter.mjs",
     "test:counter": "node ./scripts/test-counter-lifecycle.mjs",
     "deploy:task-board": "node ./scripts/deploy-task-board.mjs",

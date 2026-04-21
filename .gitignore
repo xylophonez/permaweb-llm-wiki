@@ -2,3 +2,6 @@ node_modules
 log.md
 runs
 .codex
+
+wallet.json
+data/last-ui-deploy.json

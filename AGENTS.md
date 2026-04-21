@@ -4,6 +4,62 @@ This repo is a persistent markdown wiki maintained by an LLM.
 
 The job is not to re-derive everything from raw sources on every query. The job is to keep a durable, interlinked knowledge base current.
 
+## Core loop (mandatory for UI changes)
+
+For any task that changes UI-side source files, the ship loop is mandatory:
+
+1. apply the requested UI change
+2. run deploy for the updated web app
+3. record deploy evidence tied to the current UI source fingerprint
+4. return exactly one app card line in the assistant response
+
+The response contract after a successful deploy is:
+
+```text
+PERMAWEB_APP {"url":"https://arweave.net/<manifestId>","manifestId":"<manifestId>","archiveUrl":"https://arweave.net/<archiveId>","archiveId":"<archiveId>","title":"<app name>","description":"<short release note>"}
+```
+
+Emit exactly one `PERMAWEB_APP ...` line for a successful deploy response.
+
+For deploy failures, return:
+
+```text
+PERMAWEB_APP_ERROR {"reason":"<short reason>","stage":"<deploy stage>"}
+```
+
+Repo-level enforcement helpers:
+
+- `npm run policy:ui-check`: fails when tracked UI sources changed since the last recorded deploy evidence
+- `npm run policy:ui-check:predeploy`: permissive mode for the deploy-in-progress phase
+- `npm run deploy:record-ui -- --summary=<deploy-summary.json> --title=<title> --description=<note>`: writes `data/last-ui-deploy.json` and prints the canonical `PERMAWEB_APP ...` line
+
+Tracked UI paths are configured in `data/ui-policy.json`.
+
+Deploy wallet requirement for script-driven publishes:
+
+- local deploy signing expects a raw Arweave JWK JSON key (RSA JWK fields such as `kty`, `n`, `e`, `d`, `p`, `q`, `dp`, `dq`, `qi`)
+- if `--wallet` and `ARWEAVE_WALLET` are not provided and `wallet.json` is missing in app root, generate `wallet.json` before deploy
+- do not assume AO-specific config files are valid deploy keys
+- `wallet.json` must be gitignored in app repos
+
+Minimal generation pattern with `arweave-js`:
+
+```js
+import Arweave from "arweave";
+import { writeFile } from "node:fs/promises";
+
+const arweave = Arweave.init({ host: "arweave.net", port: 443, protocol: "https" });
+const jwk = await arweave.wallets.generate();
+await writeFile("./wallet.json", `${JSON.stringify(jwk, null, 2)}\n`, "utf8");
+```
+
+Deploy summary schema requirement for `deploy:record-ui`:
+
+- canonical required keys: `appUrl`, `manifestId`, `archiveUrl`, `archiveId`
+- do not rely on alias field names for policy evidence recording
+
+See [topics/permawebos/core-loop-policy.md](topics/permawebos/core-loop-policy.md) for the maintained deploy-response contract.
+
 ## Core model
 
 There are three layers:
@@ -86,6 +142,7 @@ Current priority topics are:
 - `topics/arweave/graphql.md`
 - `topics/arweave/bundlers-and-gateways.md`
 - `topics/permawebos/seed-pattern.md`
+- `topics/permawebos/core-loop-policy.md`
 
 ## Source priority
 
@@ -101,4 +158,6 @@ When guidance conflicts, prefer sources in this order:
 
 - AO is not the default for everything.
 - Keep [topics/ao/when-to-use-ao.md](topics/ao/when-to-use-ao.md) disciplined and evidence-backed.
+- For user-authored apps, treat wallet address as the primary identity layer; handles/display names are secondary metadata (see [topics/arweave/wallet-operations.md](topics/arweave/wallet-operations.md)).
+- Use Arweave-first storage for uploads: app/user data uploads should persist to Arweave; local/browser storage is cache or draft state, not the canonical durable record.
 - Use relative links inside the repo. Do not write machine-specific absolute paths.

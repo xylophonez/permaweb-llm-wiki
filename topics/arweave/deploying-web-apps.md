@@ -11,6 +11,14 @@ The durable part of the pattern is the output shape, not the specific frontend s
 - a source archive that preserves the app root for later agents
 - deploy metadata that links the public app back to its source archive
 
+## Arweave-first storage baseline
+
+For permaweb apps in this repo, uploads should default to Arweave persistence:
+
+- app release artifacts (assets, manifest, code archive) publish to Arweave
+- user-authored data uploads should publish to Arweave
+- local/browser storage is suitable for drafts, cache, and temporary client state, not the canonical durable record
+
 ## Two good local patterns
 
 ### Plain static HTML/CSS/JS
@@ -109,6 +117,39 @@ The tags are what let downstream tooling reconstruct lineage and discover the co
 
 Use [resources/arweave/manifest.example.json](../../resources/arweave/manifest.example.json) as the local reference shape.
 
+### Assistant deploy-output contract for UI cards
+
+When a UI-facing agent deploys a web app, the response should include:
+
+1. normal human-readable deploy confirmation
+2. one machine-readable card line with a stable prefix and JSON payload
+
+Preferred format:
+
+```text
+PERMAWEB_APP {"url":"https://arweave.net/<manifestId>","manifestId":"<manifestId>","archiveUrl":"https://arweave.net/<archiveId>","archiveId":"<archiveId>","title":"<app name>","description":"<short release note>"}
+```
+
+Emit exactly one `PERMAWEB_APP ...` line for a successful deploy response.
+
+Use this format rather than XML tags or plain `app-url ...` lines.
+
+Why this is the strongest local default:
+
+- it is parse-stable with one prefix match (`^PERMAWEB_APP `)
+- it is extensible without breaking older parsers
+- it maps directly to current deploy script output fields (`appUrl`, `archiveUrl`, IDs)
+
+The source deploy script already emits JSON with these core fields:
+
+- [resources/arweave/deploy-up.mjs](../../resources/arweave/deploy-up.mjs)
+
+Repo helper scripts that enforce and emit this contract:
+
+- [../../scripts/ui-policy-check.mjs](../../scripts/ui-policy-check.mjs)
+- [../../scripts/record-ui-deploy.mjs](../../scripts/record-ui-deploy.mjs)
+- [../permawebos/core-loop-policy.md](../permawebos/core-loop-policy.md)
+
 ## Wallet resolution pattern
 
 The generic example script uses this wallet order:
@@ -117,7 +158,32 @@ The generic example script uses this wallet order:
 2. `ARWEAVE_WALLET`
 3. `wallet.json` in app root
 
+Deploy scripts in this pattern expect a raw Arweave JWK JSON key for local signing.
+
+- expected fields include RSA JWK key material such as `kty`, `n`, `e`, `d`, `p`, `q`, `dp`, `dq`, `qi`
+- if no explicit wallet path is provided and `wallet.json` is missing, generate `wallet.json` before deploy
+- do not assume AO config files are deploy signer keys
+- `wallet.json` must be gitignored in app repos
+
+Minimal `arweave-js` generation example:
+
+```js
+import Arweave from "arweave";
+import { writeFile } from "node:fs/promises";
+
+const arweave = Arweave.init({ host: "arweave.net", port: 443, protocol: "https" });
+const jwk = await arweave.wallets.generate();
+await writeFile("./wallet.json", `${JSON.stringify(jwk, null, 2)}\n`, "utf8");
+```
+
 For browser dApps, use [wallet-operations.md](wallet-operations.md): `window.arweaveWallet` for permissions/sign/dispatch, plus `arweave-js` for transaction construction and status checks.
+
+For UI policy evidence recording, keep deploy summary output canonical:
+
+- `appUrl`
+- `manifestId`
+- `archiveUrl`
+- `archiveId`
 
 ## Why this matters for LLM-friendly apps
 

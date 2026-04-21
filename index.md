@@ -28,6 +28,7 @@ This is the content-oriented catalog for the Permaweb LLM Wiki.
 
 - [topics/permawebos/workspace-model.md](topics/permawebos/workspace-model.md): durable workspace context, release boundaries, and agent-visible files.
 - [topics/permawebos/seed-pattern.md](topics/permawebos/seed-pattern.md): seed release requirements for forkable, LLM-friendly apps.
+- [topics/permawebos/core-loop-policy.md](topics/permawebos/core-loop-policy.md): mandatory deploy-and-card loop for UI-side changes.
 
 ## Resources
 
@@ -40,6 +41,7 @@ This is the content-oriented catalog for the Permaweb LLM Wiki.
 - [resources/arweave/wallets-injected-api-snippets.md](resources/arweave/wallets-injected-api-snippets.md): minimal Wander Injected API operations for dApps.
 - [resources/arweave/arweave-js-browser-snippets.md](resources/arweave/arweave-js-browser-snippets.md): browser-focused `arweave-js` initialization and tx flows.
 - [resources/permawebos/final-seed-checklist.md](resources/permawebos/final-seed-checklist.md): hardened seed-release checklist.
+- [data/ui-policy.json](data/ui-policy.json): tracked source roots and exclusions for UI deploy policy enforcement.
 
 ## Evidence
 
@@ -49,5 +51,7 @@ This is the content-oriented catalog for the Permaweb LLM Wiki.
 - [ao/](ao/): local AO blueprints and examples.
 - [scripts/](scripts/): local deploy and interaction harnesses.
 - [docs/scripts/](docs/scripts/): script behavior and CLI notes.
+- [docs/scripts/ui-policy-check.md](docs/scripts/ui-policy-check.md): UI source hash vs. deploy-evidence policy gate.
+- [docs/scripts/record-ui-deploy.md](docs/scripts/record-ui-deploy.md): writes UI deploy evidence and emits canonical app-card line.
 - [runs/README.md](runs/README.md): generated run-artifact layout.
 - [codebases/README](codebases/README): supporting example codebases in scope.

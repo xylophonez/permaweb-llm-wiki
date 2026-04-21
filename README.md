@@ -9,6 +9,7 @@ The maintained synthesis lives under `topics/`. Supporting evidence and examples
 - `AGENTS.md`: maintenance workflow and repo rules.
 - `index.md`: current catalog of pages and evidence.
 - `log.md`: append-only ingest and lint history.
+- `topics/permawebos/core-loop-policy.md`: mandatory UI-change deploy loop and structured app-card output contract.
 
 ## Current focus
 
@@ -33,3 +34,13 @@ npm run test:counter
 npm run deploy:task-board
 npm run deploy:token
 ```
+
+## UI deploy policy helpers
+
+```bash
+npm run policy:ui-check
+npm run policy:ui-check:predeploy
+npm run deploy:record-ui -- --summary=./runs/deploy-summary.json --title="App Name" --description="What changed"
+```
+
+Configure tracked UI source roots in `data/ui-policy.json`.
