@@ -1,35 +1,50 @@
-# Browser AO Client Reliability
+# Browser AO client reliability
 
-This page captures practical reliability guidance for browser dApps using wallet-signed AO actions.
+This page separates signer-free reads from wallet-signed writes and defines safe failure handling for AO browser clients.
 
-## Baseline configuration
+## Identify the AO protocol first
 
-- Build browser AO clients with explicit scheduler context:
-  - `connect({ MODE: "mainnet", URL, SCHEDULER, signer })`
-- Keep endpoint and timeout controls explicit in env:
-  - `AO_URL`
-  - `AO_FALLBACK_URLS`
-  - `AO_SCHEDULER`
-  - `AO_REQUEST_TIMEOUT_MS`
-- Request wallet permissions needed for signed AO actions before runtime reads/writes:
-  - `ACCESS_ADDRESS`
-  - `SIGN_TRANSACTION`
+- LegacyNet clients commonly use `@permaweb/aoconnect` message, result, and dry-run APIs with scheduler and process IDs.
+- AO-Core and HyperBEAM clients commonly resolve state through HTTP methods and device paths.
+- Do not treat their process IDs, module IDs, scheduler IDs, endpoints, or result shapes as interchangeable.
+- Keep protocol mode, read endpoints, the single write endpoint, scheduler context when required, and timeouts explicit in configuration.
 
-## Runtime patterns
+## Read path
 
-- Never use `dryrun` for this browser AO interaction flow.
-- Use signed `message -> result` for both writes and interactive reads.
-- Keep reads and writes action-tag driven, and assert expected reply actions.
-- Retry one transient `ao.message(...)` failure before marking an endpoint failed.
-- Fail over to the next AO endpoint only after the retry window is exhausted.
-- Use transport timeouts that reflect mainnet latency (prefer `>=30s`).
+- Keep public browsing and startup reads usable without a connected wallet.
+- For LegacyNet, use `dryrun` or another signer-free read API when the process exposes a deterministic read action.
+- For AO-Core, use the appropriate `GET` or `HEAD` resolution path when the device or process exposes one.
+- Use a signed message for a read only when the protocol intentionally requires authenticated state access.
+- Validate the returned action, status, and payload shape. Transport success alone is not semantic success.
+- Bounded retries and endpoint failover are appropriate for idempotent reads. Record which read provider produced the response.
+- Independent signer-free reads may run in bounded parallel groups.
 
-## Concurrency pattern for wallet-signed calls
+## Write path
 
-- Serialize wallet-signed AO actions by default in browser clients.
-- Reason: overlapping signed calls can produce transport stalls, extension prompt contention, or misleading hangs.
-- Tradeoff: startup reads can become visibly slower.
-- If optimization is needed later, parallelize only after proving wallet/provider behavior is stable under concurrent signing.
+- Start a write only from an explicit user action.
+- Request the minimum wallet permissions at the moment they are needed.
+- Prepare and validate the exact process, action tags, payload, and destination before requesting a signature.
+- Choose one write route before signing. Do not rotate through `AO_FALLBACK_URLS` for a signed, non-idempotent message.
+- Serialize wallet prompts and dependent process turns. This avoids overlapping approvals and preserves action order.
+- Preserve the message ID and inspect `result(...)` or the protocol's application state before reporting success.
+- Validate both transport-level and application-level failures, including error actions and protocol-specific rejection payloads.
+
+Use the shared [write lifecycle](../permaweb/write-lifecycle.md) for status reporting.
+
+## Timeout and retry rules
+
+- An idempotent read timeout may use bounded retry or a different read provider.
+- A failure proven to occur before submission is `failed-before-submit`. A new attempt still requires the user's write intent to remain current.
+- A timeout after submission may have crossed the write boundary. Mark it `unknown-outcome`, preserve any known ID or payload fingerprint, and reconcile before retrying.
+- Do not automatically replay a signed AO action unless the protocol provides an effective idempotency key.
+- Provider acceptance or a message ID is not proof that a handler ran successfully.
+
+## Concurrency
+
+- Run independent signer-free reads concurrently within a bounded limit.
+- Serialize signature prompts.
+- Serialize writes whose process semantics depend on order.
+- Do not block public reads behind wallet connection or signing queues.
 
 ## Common failure signatures
 
@@ -40,15 +55,18 @@ This page captures practical reliability guidance for browser dApps using wallet
   - Cause: dependency assumes `process.version` exists.
   - Mitigation: ensure shim sets a string `process.version`.
 - `POST .../push 500` or repeated send timeouts
-  - Cause: endpoint transient issues, missing scheduler context, or too-short timeouts.
-  - Mitigation: ensure scheduler is explicit, retry transient sends once, then fail over endpoint.
+  - Cause: route failure, missing protocol context, or an ambiguous submission timeout.
+  - Mitigation: preserve the message identity, classify the last known write state, and reconcile against the same protocol before offering a new attempt.
 - UI hangs in "posting..." state
   - Cause: unresolved transport promise path or swallowed timeout/error.
-  - Mitigation: enforce send/result timeouts and always surface terminal error state to UI.
+  - Mitigation: enforce send and result timeouts, surface `unknown-outcome` separately from `rejected`, and keep a reconciliation action available.
+- Browser asks for a wallet during initial page load
+  - Cause: public reads were implemented as signed messages or placed behind a shared wallet gate.
+  - Mitigation: move public reads to dry-run or HTTP resolution paths and request permissions only for an explicit protected action.
 
 ## Use this for that
 
-- Use this page when an AO browser app works intermittently or is timing out across push endpoints.
+- Use this page when an AO browser app asks for unnecessary signatures, works intermittently, or times out around writes.
 - Use [topics/ao/process-blueprints.md](process-blueprints.md) for deploy harness rules.
 - Use [topics/ao/token-blueprints.md](token-blueprints.md) for token-specific proof flow.
 - Use [WORKING-PATTERNS.md](../../WORKING-PATTERNS.md) for short reusable patterns shared across deploy and runtime logic.

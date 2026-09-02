@@ -15,10 +15,6 @@ function assertOrThrow(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-async function sleep(ms) {
-  await new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
-}
-
 async function runCommand(cmd, args, env = process.env) {
   return execFileAsync(cmd, args, {
     cwd: resolve("."),
@@ -52,55 +48,21 @@ async function runDeployOnce(testName, envOverrides = {}) {
   };
 }
 
-async function runDeployWithRetries(testName, envOverrides, maxAttempts = 3) {
-  let lastError = null;
-
-  for (let i = 1; i <= maxAttempts; i += 1) {
-    try {
-      const result = await runDeployOnce(testName, envOverrides);
-      return { ...result, runnerAttempt: i };
-    } catch (error) {
-      lastError = error;
-      if (i < maxAttempts) await sleep(2000);
-    }
-  }
-
-  throw lastError;
-}
-
 async function main() {
   await runCommand("luac", ["-p", "./ao/counter.lua"]);
 
-  const defaultDeploy = await runDeployWithRetries(
+  const defaultDeploy = await runDeployOnce(
     "default-route",
-    { AO_PROCESS_NAME: `ao-counter-lab-default-${nowStamp()}` },
-    3
+    { AO_PROCESS_NAME: `ao-counter-lab-default-${nowStamp()}` }
   );
 
-  const fallbackDeploy = await runDeployWithRetries(
-    "forced-fallback",
-    {
-      AO_URL: "https://push-2.forward.computer",
-      AO_FALLBACK_URLS: "https://push-1.forward.computer",
-      AO_PROCESS_NAME: `ao-counter-lab-fallback-${nowStamp()}`
-    },
-    3
-  );
-
-  assertOrThrow(
-    fallbackDeploy.attempts >= 2,
-    "forced-fallback: expected at least two deploy attempts (push-2 then push-1)"
-  );
-  assertOrThrow(
-    fallbackDeploy.selectedUrl === "https://push-1.forward.computer",
-    `forced-fallback: expected selectedUrl push-1, got ${fallbackDeploy.selectedUrl}`
-  );
+  assertOrThrow(defaultDeploy.attempts === 1, "default-route: expected exactly one signed write attempt");
 
   console.log(
     JSON.stringify(
       {
         status: "ok",
-        tests: [defaultDeploy, fallbackDeploy]
+        tests: [defaultDeploy]
       },
       null,
       2

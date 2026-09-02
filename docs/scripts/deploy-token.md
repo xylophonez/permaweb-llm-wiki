@@ -18,8 +18,8 @@ node ./scripts/deploy-token.mjs --out ./runs/my-token-run.json
 
 The script:
 
-1. Resolves AO endpoints from `AO_URL` and `AO_FALLBACK_URLS`.
-2. Probes endpoints before deployment.
+1. Resolves AO endpoint candidates from `AO_URL` and `AO_FALLBACK_URLS`.
+2. Probes candidates with `HEAD` and selects one reachable write route before deployment.
 3. Spawns a new process with the configured AO module and scheduler.
 4. Sends `Eval` with `ao/token.lua`.
 5. Sends `Info`.
@@ -37,8 +37,8 @@ Success means semantic checks passed, not only transport success.
 
 ## Environment variables
 
-- `AO_URL`: primary endpoint to try first
-- `AO_FALLBACK_URLS`: comma-separated fallback endpoints
+- `AO_URL`: preferred write endpoint
+- `AO_FALLBACK_URLS`: comma-separated candidates used only during read-only preflight selection
 - `AO_SCHEDULER`
 - `AO_MODULE`
 - `AO_AUTHORITY`
@@ -76,5 +76,5 @@ The log includes:
 
 - This script creates a new process on each successful run.
 - It requires a wallet key that can sign AO messages.
-- If the first endpoint fails, the script retries on the next configured endpoint.
-- For transient AO transport send failures, the script retries `ao.message(...)` once before failing the current endpoint attempt.
+- The script sends each signed AO action once and does not replay the deployment on another endpoint after an attempt starts.
+- If failure occurs after possible submission, treat the outcome as unknown and reconcile it before running the command again.

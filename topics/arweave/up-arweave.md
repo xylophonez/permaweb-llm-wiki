@@ -1,51 +1,41 @@
 # up.arweave.net
 
-`up.arweave.net` is the cleanest repo-scoped target here when the task is "publish a static app as data items with manifest and provenance tags."
+`up.arweave.net` is the default legacy ANS-104 uploader used by `@permaweb/deploy`. It is one write route, not the only application deployment path.
 
 ## Strong local references
 
+- [permaweb-deploy.md](permaweb-deploy.md)
 - [resources/arweave/deploy-up.mjs](../../resources/arweave/deploy-up.mjs)
 - [resources/arweave/manifest.example.json](../../resources/arweave/manifest.example.json)
 - [codebases/permaweb-libs/sdk/src/common/arweave.ts](../../codebases/permaweb-libs/sdk/src/common/arweave.ts)
 - [wallet-operations.md](wallet-operations.md)
 
-## Default role in local deploy flows
+## Role in deployment flows
 
-The repo-scoped deploy example uses `up.arweave.net` to upload:
+The repo-scoped low-level example sends signed data items to `up.arweave.net` for:
 
-- gzip code archives
 - static assets
-- manifests
+- the Arweave path manifest
 
-The supporting SDK code in `permaweb-libs` shows the same broader separation of concerns even when it targets a different write endpoint:
+The supporting SDK shows the broader separation of concerns:
 
-- read and discovery use gateways such as `arweave.net` and `ao-search-gateway.goldsky.com`
-- data writes use a dedicated upload service
+- gateways and indexes handle reads and discovery
+- a selected uploader handles writes
 - larger uploads use chunked data-item flows rather than plain gateway transactions
 
-## Why use it
+## When to use it
 
-In the local deploy example, `up.arweave.net` is the cleanest route for:
+Use the legacy route when:
 
-- item-by-item asset upload
-- tagged code archive upload
-- manifest publication with provenance tags
+- the release plan calls for the default `@permaweb/deploy` uploader
+- compatibility with a legacy ANS-104 upload flow matters
+- a low-level integration needs item-by-item asset or manifest control
 
-It fits the PermawebOS model because the scripts can attach the exact tags needed for:
+For a normal static app release, start with [`@permaweb/deploy`](permaweb-deploy.md). Use [resources/arweave/deploy-up.mjs](../../resources/arweave/deploy-up.mjs) only when low-level data-item control is needed.
 
-- code archive discovery
-- asset linkage
-- fork lineage
+For HyperBEAM uploads, choose `--uploader-type hyperbeam` and pin `--uploader` when the exact write destination must be recorded.
 
-## Practical guidance
-
-If the task is "publish a built static app with manifest and lineage tags", start from [resources/arweave/deploy-up.mjs](../../resources/arweave/deploy-up.mjs).
-
-If the task is "understand the upload mechanics behind a write service", read [codebases/permaweb-libs/sdk/src/common/arweave.ts](../../codebases/permaweb-libs/sdk/src/common/arweave.ts) as well.
-
-If the task is browser-side signing and dispatch to publish from user wallets, use [wallet-operations.md](wallet-operations.md) as the primary integration path.
-
-If a browser dApp must force uploads to `up.arweave.net` programmatically, prefer `signDataItem()` + direct `fetch` upload instead of `dispatch()`.
+If a browser dApp must upload through `up.arweave.net` programmatically, keep signing behind the wallet adapter and send the resulting data item once. Do not automatically retry an ambiguous signed upload.
 
 ## Related page
 

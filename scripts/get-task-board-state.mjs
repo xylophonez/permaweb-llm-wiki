@@ -374,45 +374,41 @@ async function main() {
     runLog.preflight.endpoints.push(await probeEndpoint(aoUrl));
   }
 
-  let lastError = null;
-  for (const aoUrl of aoUrls) {
-    await recordStep({ step: "attempt-start", detail: { aoUrl, processId: args.processId } });
-    try {
-      const attempt = await runAttempt({
-        aoUrl,
-        scheduler,
-        walletPath,
-        processId: args.processId,
-        connect,
-        createSigner
-      });
-      runLog.attempts.push(attempt);
-      runLog.status = "ok";
-      runLog.selectedUrl = aoUrl;
-      runLog.processId = args.processId;
-      runLog.ids = attempt.ids;
-      runLog.validation = attempt.validation;
-      runLog.state = attempt.state;
-      return;
-    } catch (error) {
-      const failedAttempt = {
-        aoUrl,
-        processId: args.processId,
-        startedAt: nowIso(),
-        endedAt: nowIso(),
-        status: "error",
-        error: {
-          message: error?.message || String(error),
-          stack: error?.stack || ""
-        }
-      };
-      runLog.attempts.push(failedAttempt);
-      lastError = error;
-      await recordStep({ step: "attempt-failed", detail: { aoUrl, error: failedAttempt.error.message } });
-    }
-  }
+  const aoUrl = runLog.preflight.endpoints.find((endpoint) => endpoint.ok)?.url || aoUrls[0];
+  runLog.selectedUrl = aoUrl;
+  await recordStep({ step: "attempt-start", detail: { aoUrl, processId: args.processId } });
 
-  throw lastError || new Error("All AO URL attempts failed");
+  try {
+    const attempt = await runAttempt({
+      aoUrl,
+      scheduler,
+      walletPath,
+      processId: args.processId,
+      connect,
+      createSigner
+    });
+    runLog.attempts.push(attempt);
+    runLog.status = "ok";
+    runLog.processId = args.processId;
+    runLog.ids = attempt.ids;
+    runLog.validation = attempt.validation;
+    runLog.state = attempt.state;
+  } catch (error) {
+    const failedAttempt = {
+      aoUrl,
+      processId: args.processId,
+      startedAt: nowIso(),
+      endedAt: nowIso(),
+      status: "error",
+      error: {
+        message: error?.message || String(error),
+        stack: error?.stack || ""
+      }
+    };
+    runLog.attempts.push(failedAttempt);
+    await recordStep({ step: "attempt-stopped", detail: { aoUrl, error: failedAttempt.error.message } });
+    throw new Error(`AO signed read stopped without replay; inspect the last recorded step and reconcile before retrying: ${failedAttempt.error.message}`);
+  }
 }
 
 async function flushRunLog(outPath) {

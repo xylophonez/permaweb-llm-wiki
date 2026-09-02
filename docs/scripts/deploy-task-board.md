@@ -18,8 +18,8 @@ node ./scripts/deploy-task-board.mjs --name my-task-board --out ./runs/my-task-b
 
 The script:
 
-1. Resolves AO endpoints from `AO_URL` and `AO_FALLBACK_URLS`.
-2. Probes endpoints before attempting deployment.
+1. Resolves AO endpoint candidates from `AO_URL` and `AO_FALLBACK_URLS`.
+2. Probes candidates with `HEAD` and selects one reachable write route before deployment.
 3. Spawns a new process with the configured AO module and scheduler.
 4. Sends `Eval` with [`ao/task-board.lua`](../../ao/task-board.lua).
 5. Sends `Init`.
@@ -44,8 +44,8 @@ Success means semantic validation passed, not just transport success.
 
 ## Environment variables
 
-- `AO_URL`: primary endpoint to try first
-- `AO_FALLBACK_URLS`: comma-separated fallback endpoints
+- `AO_URL`: preferred write endpoint
+- `AO_FALLBACK_URLS`: comma-separated candidates used only during read-only preflight selection
 - `AO_SCHEDULER`
 - `AO_MODULE`
 - `AO_AUTHORITY`
@@ -92,4 +92,5 @@ npm run deploy:task-board -- --name ao-task-board-demo
 
 - This script is for new deployments.
 - It expects a wallet that can sign AO messages.
-- If the first endpoint fails, it automatically retries on the next configured endpoint.
+- The script does not replay a signed deployment on another endpoint after an attempt starts.
+- If failure occurs after possible submission, treat the outcome as unknown and reconcile it before running the command again.

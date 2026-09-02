@@ -55,8 +55,8 @@ It validates that:
 
 ## Environment variables
 
-- `AO_URL`
-- `AO_FALLBACK_URLS`
+- `AO_URL`: preferred write endpoint
+- `AO_FALLBACK_URLS`: candidates used only during read-only preflight selection
 - `AO_SCHEDULER`
 - `AO_WALLET_PATH` or `ARWEAVE_JWK`
 - `AO_PROCESS_NAME`
@@ -109,3 +109,5 @@ npm run interact:task-board -- \
 
 - This script mutates process state by creating a task.
 - Use it for protocol verification, demos, or smoke testing after deployment.
+- It selects one route before the interaction and does not replay signed actions across endpoints.
+- If failure occurs after possible submission, treat the outcome as unknown until process state is reconciled.

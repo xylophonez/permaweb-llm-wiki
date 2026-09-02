@@ -28,13 +28,13 @@ query LatestManifest {
 }
 ```
 
-## Child forks for a parent app
+## Releases for an application tag
 
 ```graphql
-query ChildForks {
+query ApplicationReleases {
   transactions(
     tags: [
-      { name: "forked-from", values: ["<PARENT_MANIFEST_ID>"] }
+      { name: "App-Name", values: ["<APP_NAME>"] }
       { name: "Type", values: ["manifest"] }
     ]
     first: 100
@@ -46,26 +46,6 @@ query ChildForks {
         owner {
           address
         }
-        tags {
-          name
-          value
-        }
-      }
-    }
-  }
-}
-```
-
-## Code archive for a published app
-
-```graphql
-query CodeArchive {
-  transactions(
-    ids: ["<MANIFEST_ID>"]
-  ) {
-    edges {
-      node {
-        id
         tags {
           name
           value

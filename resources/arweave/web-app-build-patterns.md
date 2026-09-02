@@ -1,77 +1,43 @@
-# Web App Build Patterns
+# Web app build patterns
 
-These patterns are distilled from a local Vite example and local plain-static seed/final templates that were not copied wholesale into this repo.
-
-This page captures the reusable guidance so the wiki can point at a repo-scoped reference instead of an external path.
+These patterns capture the reusable parts of plain-static and Vite application builds without imposing a product-specific packaging model.
 
 ## Two valid patterns
 
-Both of these are good local patterns for permaweb apps:
+Both of these work for Permaweb applications:
 
-- plain static HTML/CSS/JS builds
+- plain static HTML, CSS, and JavaScript
 - Vite builds that emit a static `dist/`
 
-The key rule is not the framework. The key rule is that the final output must be publishable as static files with manifest-safe relative paths.
+The framework is secondary. The final output must be publishable as static files with manifest-safe paths.
 
 ## Plain static pattern
 
-The lite-seed templates show the simplest durable setup:
+- keep `index.html` and styles as first-class files
+- bundle browser JavaScript only when needed
+- copy public assets into the output directory
+- keep filenames and folder layout easy to inspect
 
-- keep `index.html` and `styles.css` as first-class files
-- bundle browser JS into `dist/` with `esbuild`
-- copy `public/` straight into `dist/`
-- keep output filenames and folder layout simple enough for agents to inspect
-
-Typical build shape:
-
-- copy `index.html`
-- copy `styles.css`
-- copy `public/`
-- bundle `src/main.js` to `dist/app.js`
-- emit code-split chunks under `dist/chunks/`
-
-This is a strong default when:
-
-- the app is mostly static
-- direct file editability matters
-- you want the least moving build machinery
-- agent comprehension is more important than framework ergonomics
+Use this when the app is mostly static, direct editability matters, or minimal build machinery is valuable.
 
 ## Vite static pattern
 
-The local Vite app shows that richer frontends can still deploy cleanly if they are configured for relative output.
-
-Important Vite-side rules:
-
-- set `base: './'`
+- set `base: './'` when deployment paths vary
 - build into `dist/`
-- keep output static and gateway-resolvable
-- avoid assuming the app will always live at `/`
-- use relative asset references in the built app
+- keep head assets and emitted chunks gateway-resolvable
+- avoid assuming the app is always served from `/`
+- add deliberate browser polyfills only when installed dependencies require them
 
-Useful local practices from that app:
+Use this when the application benefits from React, TypeScript, code splitting, or Vite development ergonomics.
 
-- add a runtime `<base>` element in `index.html` so nested gateway paths still resolve correctly
-- keep `favicon`, `manifest`, and other head assets relative
-- if browser packages pull in Node APIs, polyfill them deliberately instead of hoping the bundler guesses right
-
-This is a good fit when:
-
-- the app uses React, TypeScript, or a heavier component stack
-- you need Vite dev/build ergonomics
-- you still want a final output that behaves like a plain static site after build
-
-## Shared deploy invariants
+## Shared deployment invariants
 
 Both patterns should end with:
 
-- a complete `dist/` directory
-- root-relative or current-directory-relative asset resolution
+- a complete static output directory
+- asset URLs that work through the intended gateway, path, name, or reference
 - no hidden runtime server dependency
-- a source archive that includes the real app source, not just the built output
-- a manifest that points at every published file
+- a version `0.2.0` path manifest
+- a fallback entry when the application needs SPA or not-found routing
 
-## Practical rule
-
-- Use plain static builds for seed apps, simpler UIs, and repos optimized for direct agent editing.
-- Use Vite when the app needs a modern frontend toolchain, but keep the output discipline of a static app.
+Use [`@permaweb/deploy`](../../topics/arweave/permaweb-deploy.md) as the primary folder deployment tool. The low-level uploader is an educational example for integrations that need direct control over data items and tags.

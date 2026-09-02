@@ -1,8 +1,11 @@
 {
   "manifest": "arweave/paths",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "index": {
     "path": "index.html"
+  },
+  "fallback": {
+    "id": "<FALLBACK_HTML_TX_ID>"
   },
   "paths": {
     "index.html": {
@@ -13,6 +16,9 @@
     },
     "assets/app.js": {
       "id": "<APP_JS_TX_ID>"
+    },
+    "404.html": {
+      "id": "<FALLBACK_HTML_TX_ID>"
     }
   }
 }

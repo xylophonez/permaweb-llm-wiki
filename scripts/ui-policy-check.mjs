@@ -1,8 +1,8 @@
 import {
   pathExists,
-  uiDeployEvidencePath,
+  uiReleaseEvidencePath,
   computeUiFingerprint,
-  readUiDeployEvidence
+  readUiReleaseEvidence
 } from "./ui-policy-lib.mjs";
 
 function parseArg(name) {
@@ -25,15 +25,18 @@ function failWithActions(messages, actions) {
   process.exit(1);
 }
 
+function reportLocalState(messages) {
+  for (const message of messages) {
+    console.log(message);
+  }
+}
+
 function validateEvidenceShape(payload) {
   const requiredFields = [
     "timestamp",
     "appUrl",
     "manifestId",
-    "archiveUrl",
-    "archiveId",
-    "sourceHash",
-    "cardLine"
+    "sourceHash"
   ];
   return requiredFields.filter((field) => {
     const value = payload?.[field];
@@ -43,13 +46,12 @@ function validateEvidenceShape(payload) {
 
 async function main() {
   const context = parseArg("context") || "policy-check";
-  const allowUndeployedUi = process.env.ALLOW_UNDEPLOYED_UI === "1";
-  const allowNoUiRoots = process.env.ALLOW_NO_UI_ROOTS === "1";
+  const isReleaseCheck = context === "release";
   const fingerprint = await computeUiFingerprint();
 
   if (!fingerprint.fileCount) {
-    if (allowNoUiRoots) {
-      console.log("UI policy check: no tracked UI files found; allowed by ALLOW_NO_UI_ROOTS=1.");
+    if (!isReleaseCheck) {
+      console.log("UI policy check: no tracked UI files found; no release evidence is required for this local check.");
       return;
     }
 
@@ -60,80 +62,100 @@ async function main() {
       ],
       [
         "Update data/ui-policy.json sourceRoots to existing UI paths.",
-        "Run from the correct project root.",
-        "Only for intentional non-UI runs, set ALLOW_NO_UI_ROOTS=1."
+        "Run the release check from the intended app root."
       ]
     );
   }
 
-  if (!(await pathExists(uiDeployEvidencePath))) {
-    if (context === "predeploy" || allowUndeployedUi) {
-      console.log("UI policy check: deploy evidence missing, continuing because deploy is running.");
+  if (!(await pathExists(uiReleaseEvidencePath))) {
+    if (!isReleaseCheck) {
+      reportLocalState([
+        "UI policy check: tracked UI files have no release evidence.",
+        "Local work may continue. Publishing requires explicit user authorization and a successful release record."
+      ]);
       return;
     }
 
     failWithActions(
       [
-        `UI policy check failed: missing deploy evidence at ${uiDeployEvidencePath}.`,
-        "Tracked UI files exist and must be represented by a fresh deploy."
+        `UI policy check failed: missing release evidence at ${uiReleaseEvidencePath}.`,
+        "This release has not been represented by successful release evidence."
       ],
       [
-        "Run the UI deploy script.",
-        "Run npm run deploy:record-ui -- --summary=<deploy-summary.json> ...",
-        "Re-run npm run policy:ui-check"
+        "Obtain explicit authorization for the permanent write.",
+        "Complete the authorized deploy with the selected signer.",
+        "Run npm run release:record-ui -- --summary=<deploy-summary.json> ...",
+        "Re-run npm run policy:ui-check:release"
       ]
     );
   }
 
   let evidence;
   try {
-    evidence = await readUiDeployEvidence();
+    evidence = await readUiReleaseEvidence();
   } catch {
+    if (!isReleaseCheck) {
+      reportLocalState([
+        "UI policy check: release evidence exists but is not valid JSON.",
+        "Local work may continue, but the evidence must be repaired before an authorized release is reported as complete."
+      ]);
+      return;
+    }
+
     failWithActions(
-      ["UI policy check failed: deploy evidence file exists but is not valid JSON."],
-      ["Re-run npm run deploy:record-ui with a valid deploy summary."]
+      ["UI policy check failed: release evidence file exists but is not valid JSON."],
+      ["Re-run npm run release:record-ui with a valid deploy summary."]
     );
   }
 
   const missing = validateEvidenceShape(evidence);
   if (missing.length) {
-    failWithActions(
-      [
-        "UI policy check failed: deploy evidence is missing required fields.",
-        `Missing: ${missing.join(", ")}`
-      ],
-      ["Re-run npm run deploy:record-ui after a successful deploy."]
-    );
-  }
-
-  if (!evidence.cardLine.startsWith("PERMAWEB_APP ")) {
-    failWithActions(
-      ['UI policy check failed: "cardLine" must start with "PERMAWEB_APP ".'],
-      ["Re-run npm run deploy:record-ui to regenerate the structured card line."]
-    );
-  }
-
-  if (evidence.sourceHash !== fingerprint.sourceHash) {
-    if (context === "predeploy" || allowUndeployedUi) {
-      console.log("UI policy check: tracked UI changes detected since last deploy, continuing predeploy.");
+    if (!isReleaseCheck) {
+      reportLocalState([
+        `UI policy check: release evidence is missing required fields: ${missing.join(", ")}.`,
+        "Local work may continue, but this evidence is not sufficient for a release."
+      ]);
       return;
     }
 
     failWithActions(
       [
-        "UI policy check failed: tracked UI source changed after the last recorded deploy.",
+        "UI policy check failed: release evidence is missing required fields.",
+        `Missing: ${missing.join(", ")}`
+      ],
+      ["Re-run npm run release:record-ui after a successful deploy."]
+    );
+  }
+
+  if (evidence.sourceHash !== fingerprint.sourceHash) {
+    if (!isReleaseCheck) {
+      reportLocalState([
+        "UI policy check: tracked UI source is newer than the last release evidence.",
+        "Local work may continue. Do not describe this source state as published."
+      ]);
+      return;
+    }
+
+    failWithActions(
+      [
+        "UI policy check failed: tracked UI source changed after the last recorded release.",
         `Last manifest: ${evidence.manifestId}`,
-        `Last deploy timestamp: ${evidence.timestamp}`
+        `Last release timestamp: ${evidence.timestamp}`
       ],
       [
-        "Run the UI deploy script.",
-        "Run npm run deploy:record-ui -- --summary=<deploy-summary.json> ...",
-        "Re-run npm run policy:ui-check"
+        "Obtain explicit authorization for the permanent write.",
+        "Complete the authorized deploy with the selected signer.",
+        "Run npm run release:record-ui -- --summary=<deploy-summary.json> ...",
+        "Re-run npm run policy:ui-check:release"
       ]
     );
   }
 
-  console.log("UI policy check passed: tracked UI source hash matches deploy evidence.");
+  console.log(
+    isReleaseCheck
+      ? "UI release check passed: tracked UI source hash matches release evidence."
+      : "UI policy check: tracked UI source hash matches release evidence."
+  );
 }
 
 main().catch((error) => {

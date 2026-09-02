@@ -9,14 +9,15 @@ The maintained synthesis lives under `topics/`. Supporting evidence and examples
 - `AGENTS.md`: maintenance workflow and repo rules.
 - `index.md`: current catalog of pages and evidence.
 - `log.md`: append-only ingest and lint history.
-- `topics/permawebos/core-loop-policy.md`: mandatory UI-change deploy loop and structured app-card output contract.
+- `topics/permaweb/release-policy.md`: local iteration, explicit release authorization, and source-linked release evidence.
+- `topics/permaweb/write-lifecycle.md`: shared state model for signed writes, propagation, and completion.
 
 ## Current focus
 
 - when AO is warranted and when GraphQL is enough
 - how local AO process blueprints are written and validated
-- how static Arweave app deploys should package manifests, code archives, and provenance
-- how PermawebOS-style seed apps should preserve instructions and redeploy paths for later agents
+- how static Arweave apps should build, publish manifests, and update optional names or references
+- how agents should preserve inspectable project context without imposing a project-specific release format
 
 ## Useful local evidence
 
@@ -40,7 +41,8 @@ npm run deploy:token
 ```bash
 npm run policy:ui-check
 npm run policy:ui-check:predeploy
-npm run deploy:record-ui -- --summary=./runs/deploy-summary.json --title="App Name" --description="What changed"
+npm run policy:ui-check:release
+npm run release:record-ui -- --summary=./runs/deploy-summary.json --title="App Name" --description="What changed"
 ```
 
-Configure tracked UI source roots in `data/ui-policy.json`.
+The first two commands are read-only status checks. Use the strict release check and evidence recorder only inside a user-authorized publish flow. Configure tracked UI source roots in `data/ui-policy.json`.

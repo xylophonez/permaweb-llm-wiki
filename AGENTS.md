@@ -4,61 +4,50 @@ This repo is a persistent markdown wiki maintained by an LLM.
 
 The job is not to re-derive everything from raw sources on every query. The job is to keep a durable, interlinked knowledge base current.
 
-## Core loop (mandatory for UI changes)
+## Build and release boundary
 
-For any task that changes UI-side source files, the ship loop is mandatory:
+UI work does not authorize a permanent write. For ordinary UI tasks:
 
-1. apply the requested UI change
-2. run deploy for the updated web app
-3. record deploy evidence tied to the current UI source fingerprint
-4. return exactly one app card line in the assistant response
+1. apply the requested change
+2. run the relevant local checks and build
+3. preview locally when useful
+4. report the local result and any remaining verification boundary
 
-The response contract after a successful deploy is:
+Publish only when the user explicitly asks to deploy, publish, release, or otherwise authorizes the permanent write. An authorized release must:
 
-```text
-PERMAWEB_APP {"url":"https://arweave.net/<manifestId>","manifestId":"<manifestId>","archiveUrl":"https://arweave.net/<archiveId>","archiveId":"<archiveId>","title":"<app name>","description":"<short release note>"}
-```
+1. identify the exact release target and current source state
+2. use a signer already selected by the user or project
+3. request signing only when the release payload is ready
+4. submit once to the selected write target
+5. record returned IDs and the current UI source fingerprint
+6. verify the operation-specific completion conditions
 
-Emit exactly one `PERMAWEB_APP ...` line for a successful deploy response.
-
-For deploy failures, return:
-
-```text
-PERMAWEB_APP_ERROR {"reason":"<short reason>","stage":"<deploy stage>"}
-```
+Do not create, import, replace, or export a wallet merely to unblock a release. Prefer a connected browser wallet so the key remains behind the wallet adapter. A missing signer blocks a script-driven release until the user supplies or selects one.
 
 Repo-level enforcement helpers:
 
-- `npm run policy:ui-check`: fails when tracked UI sources changed since the last recorded deploy evidence
-- `npm run policy:ui-check:predeploy`: permissive mode for the deploy-in-progress phase
-- `npm run deploy:record-ui -- --summary=<deploy-summary.json> --title=<title> --description=<note>`: writes `data/last-ui-deploy.json` and prints the canonical `PERMAWEB_APP ...` line
+- `npm run policy:ui-check`: reports whether tracked UI sources match release evidence without publishing or blocking local work
+- `npm run policy:ui-check:predeploy`: compatibility alias for an advisory check during release preparation
+- `npm run policy:ui-check:release`: strict post-deploy gate for an explicitly authorized release
+- `npm run release:record-ui -- --summary=<deploy-summary.json> --title=<title> --description=<note>`: writes source-linked evidence to `data/last-ui-release.json`
 
 Tracked UI paths are configured in `data/ui-policy.json`.
 
-Deploy wallet requirement for script-driven publishes:
+Signer requirement for script-driven publishes:
 
 - local deploy signing expects a raw Arweave JWK JSON key (RSA JWK fields such as `kty`, `n`, `e`, `d`, `p`, `q`, `dp`, `dq`, `qi`)
-- if `--wallet` and `ARWEAVE_WALLET` are not provided and `wallet.json` is missing in app root, generate `wallet.json` before deploy
+- use only an explicit `--wallet`, `ARWEAVE_WALLET`, or already selected project signer
+- if no signer is available, stop and ask the user to select one; do not generate `wallet.json` automatically
 - do not assume AO-specific config files are valid deploy keys
 - `wallet.json` must be gitignored in app repos
 
-Minimal generation pattern with `arweave-js`:
+Deploy summary schema requirement for `release:record-ui`:
 
-```js
-import Arweave from "arweave";
-import { writeFile } from "node:fs/promises";
-
-const arweave = Arweave.init({ host: "arweave.net", port: 443, protocol: "https" });
-const jwk = await arweave.wallets.generate();
-await writeFile("./wallet.json", `${JSON.stringify(jwk, null, 2)}\n`, "utf8");
-```
-
-Deploy summary schema requirement for `deploy:record-ui`:
-
-- canonical required keys: `appUrl`, `manifestId`, `archiveUrl`, `archiveId`
+- canonical required keys: `appUrl`, `manifestId`
 - do not rely on alias field names for policy evidence recording
 
-See [topics/permawebos/core-loop-policy.md](topics/permawebos/core-loop-policy.md) for the maintained deploy-response contract.
+See [topics/permaweb/release-policy.md](topics/permaweb/release-policy.md) for the maintained build and release boundary.
+See [topics/permaweb/write-lifecycle.md](topics/permaweb/write-lifecycle.md) for signing, submission, reconciliation, and completion states.
 
 ## Core model
 
@@ -141,8 +130,8 @@ Current priority topics are:
 - `topics/arweave/up-arweave.md`
 - `topics/arweave/graphql.md`
 - `topics/arweave/bundlers-and-gateways.md`
-- `topics/permawebos/seed-pattern.md`
-- `topics/permawebos/core-loop-policy.md`
+- `topics/permaweb/release-policy.md`
+- `topics/permaweb/write-lifecycle.md`
 
 ## Source priority
 
