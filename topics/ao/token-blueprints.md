@@ -1,4 +1,4 @@
-# Token Blueprints
+# Token blueprints
 
 This wiki maintains one recommended AO token flow.
 
@@ -29,17 +29,21 @@ A run is valid only when:
 ## Runtime hardening notes
 
 - Always send `Balance` checks with an explicit recipient tag tied to the deployment wallet address (`Recipient=<derived wallet address>`), instead of relying on implicit sender defaults.
-- Treat occasional AO transport failures as transient during message send (`HTTP request failed`) and retry `ao.message(...)` once before failing the attempt.
+- Probe candidate routes with idempotent requests, then choose one write route before spawning or sending messages.
+- Do not replay `ao.message(...)` automatically after a transport error. A timeout may mean the action was accepted even though the response was lost.
+- Preserve returned IDs and reconcile process state before starting another authorized attempt.
 
-## Defaults
+## Versioned harness values
 
-The local deploy harness defaults are:
+The local deploy harness currently contains:
 
 - `AO_SCHEDULER`: `n_XZJhUnmldNFo4dhajoPZWhBXuJk-OcQr5JQ49c4Zo`
 - `AO_MODULE`: `ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s`
 - AO URL priority:
   - `https://push-1.forward.computer`
   - `https://push-2.forward.computer`
+
+Treat these as versioned example values, not universal AO defaults. Validate them against the selected protocol and environment before use.
 
 ## Use this for that
 

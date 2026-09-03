@@ -1,4 +1,4 @@
-# AO Process Blueprints
+# AO process blueprints
 
 This repo keeps a small local AO example corpus that is easier for agents to learn from than a giant cookbook dump.
 
@@ -10,8 +10,8 @@ This repo keeps a small local AO example corpus that is easier for agents to lea
 
 ## Primary local harnesses
 
-- [scripts/deploy-counter.mjs](../../scripts/deploy-counter.mjs): full lifecycle deploy harness with failover and semantic assertions.
-- [scripts/test-counter-lifecycle.mjs](../../scripts/test-counter-lifecycle.mjs): live integration test runner for default and forced-failover routes.
+- [scripts/deploy-counter.mjs](../../scripts/deploy-counter.mjs): full lifecycle deploy harness with read-only route selection, one signed attempt, and semantic assertions.
+- [scripts/test-counter-lifecycle.mjs](../../scripts/test-counter-lifecycle.mjs): live integration test runner that requires exactly one signed deployment attempt.
 - [scripts/deploy-task-board.mjs](../../scripts/deploy-task-board.mjs): full task-board deploy and validation flow.
 - [scripts/interact-task-board.mjs](../../scripts/interact-task-board.mjs): interaction runner for an existing deployed board.
 - [scripts/get-task-board-state.mjs](../../scripts/get-task-board-state.mjs): deterministic state reader with fallback reconstruction.
@@ -39,17 +39,21 @@ The strongest reusable guidance currently captured in [WORKING-PATTERNS.md](../.
 - make setup one-way: `Init` once, then owner-gated writes after configuration
 - return explicit action tags on every handler
 - prove deploy success with semantic assertions, not just message IDs
-- probe AO endpoints before deploy and fail over automatically
+- probe AO endpoints with idempotent reads, then select one write route before signing
+- reconcile an ambiguous signed write instead of replaying it across endpoints
+- keep LegacyNet and AO-Core identifiers and transport rules separate
 
-## Reliable defaults
+## Versioned harness values
 
-The current local harness defaults are:
+The current local harnesses contain these concrete values:
 
 - `AO_SCHEDULER`: `n_XZJhUnmldNFo4dhajoPZWhBXuJk-OcQr5JQ49c4Zo`
 - `AO_MODULE`: `ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s`
 - AO URL priority:
   - `https://push-1.forward.computer`
   - `https://push-2.forward.computer`
+
+These values are evidence of what the checked-in scripts used. They are not universal AO defaults. Validate the protocol mode and current environment before using them in a new deployment.
 
 ## Use this for that
 
@@ -58,6 +62,7 @@ The current local harness defaults are:
 - Use `ao/token.lua` when the need is a token action surface with deploy-time interaction proof.
 - Use the deploy scripts when the task needs live-network validation and structured run logs, not just blueprint authoring.
 - Use [browser-client-reliability.md](browser-client-reliability.md) when the issue is browser runtime transport/signing behavior rather than deploy harness behavior.
+- Use [../permaweb/write-lifecycle.md](../permaweb/write-lifecycle.md) to classify acceptance, application, indexing, and ambiguous outcomes.
 
 ## Evidence
 - [WORKING-PATTERNS.md](../../WORKING-PATTERNS.md)

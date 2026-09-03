@@ -38,8 +38,8 @@ That means it works with:
 
 ## Environment variables
 
-- `AO_URL`
-- `AO_FALLBACK_URLS`
+- `AO_URL`: preferred endpoint
+- `AO_FALLBACK_URLS`: candidates used only during read-only preflight selection
 - `AO_SCHEDULER`
 - `AO_WALLET_PATH` or `ARWEAVE_JWK`
 
@@ -89,3 +89,4 @@ npm run state:task-board -- --process BarutlHJmCSZGzkTyhCazsd-LyFHrsm8gry69XJ55N
 
 - This is a read-only script.
 - It still requires a wallet because it uses AO message/result flows.
+- Those signed messages are not replayed across endpoints. Prefer a signer-free read API in new browser clients when the deployed protocol exposes one.

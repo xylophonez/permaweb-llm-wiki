@@ -20,6 +20,6 @@
   "excludeFiles": [
     "wallet.json",
     ".agents-ack.json",
-    "data/last-ui-deploy.json"
+    "data/last-ui-release.json"
   ]
 }

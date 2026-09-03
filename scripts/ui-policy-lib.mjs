@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export const root = process.cwd();
 export const uiPolicyPath = path.join(root, "data", "ui-policy.json");
-export const uiDeployEvidencePath = path.join(root, "data", "last-ui-deploy.json");
+export const uiReleaseEvidencePath = path.join(root, "data", "last-ui-release.json");
 
 const DEFAULT_SOURCE_ROOTS = [
   "ui",
@@ -23,7 +23,7 @@ const DEFAULT_EXCLUDED_DIRS = ["node_modules", "dist", ".git", "runs"];
 const DEFAULT_EXCLUDED_FILES = [
   "wallet.json",
   ".agents-ack.json",
-  "data/last-ui-deploy.json"
+  "data/last-ui-release.json"
 ];
 
 function normalizeRelative(inputPath) {
@@ -165,8 +165,7 @@ export async function computeUiFingerprint() {
   };
 }
 
-export async function readUiDeployEvidence() {
-  const raw = await fs.readFile(uiDeployEvidencePath, "utf8");
+export async function readUiReleaseEvidence() {
+  const raw = await fs.readFile(uiReleaseEvidencePath, "utf8");
   return JSON.parse(raw);
 }
-

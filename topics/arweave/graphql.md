@@ -41,8 +41,8 @@ Move toward AO when:
 The current local snippets cover:
 
 - latest manifest lookup
-- child fork discovery by `forked-from`
-- code archive lookup for a published app
+- discovery by owner and application tags
+- returned transaction IDs and tags for release lookup
 
 The current local reference page covers the helper-level "spec":
 

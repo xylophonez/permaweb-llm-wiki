@@ -47,34 +47,38 @@ await fetch("https://up.arweave.net", {
 
 ## Browser integration baseline
 
+Run this flow from an explicit publish action, not during page load. Prepare the payload before requesting permissions.
+
 ```ts
 import Arweave from "arweave";
 
-await window.arweaveWallet.connect([
-  "ACCESS_ADDRESS",
-  "ACCESS_ARWEAVE_CONFIG",
-  "SIGN_TRANSACTION",
-  "DISPATCH"
-]);
+async function publishPreparedData(data: string) {
+  await window.arweaveWallet.connect([
+    "ACCESS_ADDRESS",
+    "ACCESS_ARWEAVE_CONFIG",
+    "SIGN_TRANSACTION",
+    "DISPATCH"
+  ]);
 
-const address = await window.arweaveWallet.getActiveAddress();
-const gateway = await window.arweaveWallet.getArweaveConfig();
-const arweave = Arweave.init(gateway);
+  const address = await window.arweaveWallet.getActiveAddress();
+  const gateway = await window.arweaveWallet.getArweaveConfig();
+  const arweave = Arweave.init(gateway);
 
-const tx = await arweave.createTransaction({ data: "hello" });
-tx.addTag("Content-Type", "text/plain");
-tx.addTag("Sender", address);
+  const tx = await arweave.createTransaction({ data });
+  tx.addTag("Content-Type", "text/plain");
+  tx.addTag("Sender", address);
 
-const signedFields = await window.arweaveWallet.sign(tx);
-tx.setSignature({
-  id: signedFields.id,
-  owner: signedFields.owner,
-  reward: signedFields.reward,
-  tags: signedFields.tags,
-  signature: signedFields.signature
-});
+  const signedFields = await window.arweaveWallet.sign(tx);
+  tx.setSignature({
+    id: signedFields.id,
+    owner: signedFields.owner,
+    reward: signedFields.reward,
+    tags: signedFields.tags,
+    signature: signedFields.signature
+  });
 
-await window.arweaveWallet.dispatch(tx);
+  return window.arweaveWallet.dispatch(tx);
+}
 ```
 
 ## Operational guidance
@@ -83,6 +87,7 @@ await window.arweaveWallet.dispatch(tx);
 - Keep permission requests minimal and explicit.
 - Align gateway usage with `getArweaveConfig()` when the wallet can override gateway settings.
 - Check tx status and confirmations before treating tx IDs as finalized.
+- Treat dispatch timeouts as unknown outcomes and reconcile by transaction ID before offering another submission.
 - For large batch publishing, use bundling-oriented paths instead of raw per-tx posting.
 - For user/app uploads, prefer Arweave persistence as the durable source of truth; use local storage for drafts/cache only.
 
@@ -92,3 +97,4 @@ await window.arweaveWallet.dispatch(tx);
 - [../../docs/arweave-js.md](../../docs/arweave-js.md)
 - [../../resources/arweave/wallets-injected-api-snippets.md](../../resources/arweave/wallets-injected-api-snippets.md)
 - [../../resources/arweave/arweave-js-browser-snippets.md](../../resources/arweave/arweave-js-browser-snippets.md)
+- [../permaweb/write-lifecycle.md](../permaweb/write-lifecycle.md)

@@ -1,4 +1,4 @@
-# Working Patterns for AO Processes
+# Working patterns for AO processes
 
 ## Authoring pattern (Lua)
 
@@ -15,24 +15,27 @@
 ## Deployment pattern (JS + aoconnect)
 
 1. Sanitize env input.
-2. Resolve ordered AO URLs (`AO_URL` then `AO_FALLBACK_URLS`, else defaults).
-3. Probe endpoints.
-4. For each URL, run full lifecycle:
+2. Identify the protocol and validate scheduler, module, and process identifiers for that protocol.
+3. Probe candidate endpoints with idempotent reads only.
+4. Select one write URL before signing.
+5. Run one explicitly authorized lifecycle on that URL:
    - `spawn`
    - `Eval`
    - protocol-specific actions
-   - retry one transient `ao.message(...)` send failure before marking the attempt failed
-5. Assert semantic results, not just transport success.
-6. Persist full run log JSON with attempt telemetry.
+6. Assert semantic results, not just transport success or returned IDs.
+7. Persist full run log JSON with IDs, last observed lifecycle state, and attempt telemetry.
 
-## Browser interaction pattern (wallet-signed AO actions)
+If a send is proven to fail before submission, an operator may choose a new route for a new authorized attempt. If submission may have occurred, reconcile the existing ID or payload before any replay.
 
-- Never use `dryrun` in the browser runtime interaction path.
-- Use signed `message -> result` reads/writes for runtime behavior.
-- Include `SCHEDULER` in `connect(...)` for mainnet browser clients.
-- Serialize wallet-signed actions to avoid overlapping signature prompts and transport stalls.
-- Use a per-endpoint transient send retry (`ao.message(...)`) before failing over.
-- Use realistic transport timeouts (>= 30s) for mainnet push routes.
+## Browser interaction pattern
+
+- Use signer-free reads where the protocol supports them: LegacyNet `dryrun` or read APIs, and AO-Core `GET` or `HEAD` resolution.
+- Request wallet permissions only for an explicit action that needs identity or signing.
+- Include scheduler context when the selected LegacyNet flow requires it.
+- Choose one write route before signing and do not automatically retry or fail over an ambiguous send.
+- Serialize signature prompts and ordered process writes; allow bounded concurrency for independent public reads.
+- Preserve IDs and reconcile `unknown-outcome` writes before another attempt.
+- Report application state separately from provider acceptance and index visibility.
 
 ## Token flow pattern
 
@@ -52,13 +55,14 @@ A deployment is not accepted until both conditions are true:
 ## Test pattern (real network integration)
 
 - Validate Lua syntax first: `luac -p ao/counter.lua`.
-- Run a standard deploy test (`default-route`).
-- Run a forced failover test (`AO_URL=push-2`, fallback to `push-1`).
+- Run a standard deploy test against one selected write route.
+- Run an idempotent read-failover test separately.
+- Simulate an ambiguous write timeout and assert that the harness does not replay the signed action.
 - Assert:
-  - status `ok`
-  - selected URL expectation
-  - at least 2 attempts for forced fallback
-  - semantic state checks pass
+  - the selected write URL is stable for the attempt
+  - returned IDs are preserved
+  - semantic state checks pass before completion
+  - ambiguous writes enter reconciliation instead of retry
 
 ## Extracted guidance from cloned codebases
 
@@ -71,10 +75,6 @@ From `codebases/mux`:
 - Prefer machine-checkable payloads and clear state transitions.
 - Keep process state observable through deterministic read handlers.
 
-## Reliable defaults
+## Versioned example values
 
-- `AO_SCHEDULER`: `n_XZJhUnmldNFo4dhajoPZWhBXuJk-OcQr5JQ49c4Zo`
-- `AO_MODULE`: `ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s`
-- AO URL priority:
-  1. `https://push-1.forward.computer`
-  2. `https://push-2.forward.computer`
+The local harnesses currently contain concrete scheduler, module, and push URL values. Treat them as versioned examples tied to those scripts, not universal AO defaults. Validate them against the protocol and environment before a new run.
